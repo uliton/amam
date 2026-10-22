@@ -2,9 +2,11 @@ import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   ArrowRight,
+  Asterisk,
   BarChart3,
   Check,
   Clock3,
+  Flower2,
   Heart,
   History,
   LogIn,
@@ -379,7 +381,7 @@ function App() {
             </div>
             <div className="clock-time">
               {timeLabel(now, offset)}
-              <span className="clock-spark">✳</span>
+              <Asterisk className="clock-spark" aria-hidden="true" strokeWidth={1.5} />
             </div>
             <div className="clock-bottom">
               <span>
@@ -450,9 +452,11 @@ function App() {
                         </span>
                         <ArrowRight size={18} />
                       </div>
-                      <span className="card-decoration" aria-hidden="true">
-                        {child.id === "leon" ? "✳" : "✿"}
-                      </span>
+                      {child.id === "leon" ? (
+                        <Asterisk className="card-decoration" aria-hidden="true" strokeWidth={1.5} />
+                      ) : (
+                        <Flower2 className="card-decoration" aria-hidden="true" strokeWidth={1.5} />
+                      )}
                     </button>
                   );
                 })}
@@ -536,9 +540,7 @@ function App() {
                   Ви дбаєте про малечу.
                   <br />А ми — про маленькі деталі.
                 </p>
-                <span className="note-flower" aria-hidden="true">
-                  ✳
-                </span>
+                <Asterisk className="note-flower" aria-hidden="true" strokeWidth={1.5} />
               </div>
             </aside>
           </div>
