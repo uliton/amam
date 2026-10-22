@@ -25,7 +25,7 @@ jobs:
       - run: npm ci
       - run: npm run build
         env:
-          VITE_API_URL: ${{ vars.VITE_API_URL || 'https://api.crl.md:8443/api' }}
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'https://kolir.in:8443/api' }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

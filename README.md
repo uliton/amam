@@ -25,7 +25,7 @@ npm run dev
 
 Workflow `.github/workflows/deploy.yml` збирає та публікує фронтенд після push у `main`.
 У Settings → Pages → Source виберіть **GitHub Actions**. URL: `https://uliton.github.io/amam/`.
-Адреса API за замовчуванням: `https://api.crl.md:8443/api`; її можна змінити через Repository variable `VITE_API_URL`.
+Адреса API за замовчуванням: `https://kolir.in:8443/api`; її можна змінити через Repository variable `VITE_API_URL`.
 Production base `/amam/` встановлюється під час GitHub Actions; локально використовується `/`.
 
 ```sh
