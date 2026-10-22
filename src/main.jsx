@@ -290,7 +290,7 @@ function App() {
         >
           <span className="brand-icon">🍼</span>
           <span>
-            а-мам<span className="brand-dot">.</span>
+            am-am<span className="brand-dot">.</span>
           </span>
         </a>
         <nav aria-label="Головна навігація">
@@ -652,7 +652,7 @@ function App() {
           </section>
         )}
         <footer>
-          <span className="footer-brand">а-мам.</span>
+          <span className="footer-brand">am-am.</span>
           <span>
             Зроблено з турботою для Леона й Луки <Heart size={12} />
           </span>
