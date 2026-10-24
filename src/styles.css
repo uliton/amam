@@ -1798,3 +1798,672 @@ dialog::backdrop {
     transition: none !important;
   }
 }
+
+/* Review update: quiet page headings, readable details, and visible bottle remainder. */
+.compact-hero {
+  padding: 28px 0 30px;
+}
+.compact-hero h1 {
+  font-size: 30px;
+  letter-spacing: -1px;
+}
+.compact-hero .clock-card {
+  padding: 16px 22px;
+}
+.clock-label {
+  font-size: 13px;
+  letter-spacing: 0;
+  font-weight: 650;
+}
+.compact-hero .clock-time {
+  font-size: 43px;
+  line-height: 1.35;
+}
+.clock-bottom,
+.clock-bottom button {
+  font-size: 12px;
+}
+.clock-spark {
+  width: 30px;
+  height: 30px;
+}
+.header nav button {
+  font-size: 14px;
+}
+.header-family,
+.subtle,
+.text-button,
+.demo-banner,
+.connect-banner,
+.error-banner {
+  font-size: 13px;
+}
+.demo-banner button,
+.connect-banner button,
+.error-banner button {
+  font-size: 13px;
+}
+.demo-banner {
+  background: #edf3e5;
+  color: #526847;
+}
+.child-hint {
+  font-size: 13px;
+  color: #66745c;
+}
+.peach .child-hint {
+  color: #8b6a52;
+}
+.last-feeding > span {
+  font-size: 13px;
+  color: #617153;
+  line-height: 1.5;
+}
+.peach .last-feeding > span {
+  color: #88674e;
+}
+.last-feeding small {
+  font-size: 12px;
+  color: #66745c;
+}
+.peach .last-feeding small {
+  color: #88674e;
+}
+.child-footer {
+  font-size: 12px;
+  color: #576c4a;
+  line-height: 1.6;
+  min-height: 60px;
+}
+.peach .child-footer {
+  color: #88674e;
+}
+.daily-title h2 {
+  font-size: 15px;
+}
+.daily-title p,
+.daily-total p,
+.feeding-count,
+.daily-footer {
+  font-size: 12px;
+  color: #6c775e;
+}
+.breakdown-title {
+  font-size: 14px;
+}
+.breakdown-title b {
+  font-size: 16px;
+}
+.breakdown-title small {
+  font-size: 12px;
+}
+.care-note p {
+  font-size: 13px;
+  color: #727761;
+}
+.care-note h3 {
+  font-size: 18px;
+}
+footer,
+.connection-status {
+  font-size: 12px;
+  color: #707a64;
+}
+.connection-status {
+  padding: 8px 0;
+  min-height: 40px;
+}
+.metric p,
+.chart-card .subtle,
+.chart-legend,
+.stats-caption {
+  font-size: 12px;
+  color: #6d7c60;
+}
+.segmented button,
+.stats-toolbar select {
+  font-size: 14px;
+}
+.chart-value,
+.chart-day {
+  font-size: 12px;
+  color: #66775a;
+}
+.many-days .chart-value {
+  font-size: 9px;
+}
+.many-days .chart-day {
+  font-size: 10px;
+}
+.record {
+  gap: 13px;
+}
+.record-name strong {
+  font-size: 15px;
+}
+.record-name > span,
+.record-ml > span {
+  font-size: 12px;
+  color: #717b66;
+  line-height: 1.6;
+}
+.record-ml strong {
+  font-size: 18px;
+}
+.record-ml small,
+.record-interval > span {
+  font-size: 12px;
+}
+.record-interval strong {
+  font-size: 15px;
+}
+.record-interval {
+  margin-right: 8px;
+}
+.spit-badge {
+  font-size: 12px;
+  white-space: normal;
+  color: #64774f;
+}
+.spit-badge.yes {
+  color: #926e4a;
+}
+.record-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.record-actions .icon-btn {
+  min-width: 40px;
+  min-height: 40px;
+  color: #69785b;
+}
+.record-actions .delete-record {
+  color: #a36d58;
+}
+.restore-button {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: #49684c;
+  padding: 5px 7px;
+}
+.empty p,
+.empty h3 {
+  font-size: 14px;
+}
+.modal-description,
+.field-help {
+  font-size: 13px;
+  color: #6c775f;
+}
+.field-label {
+  font-size: 14px;
+  color: #526447;
+}
+.primary,
+.secondary {
+  font-size: 15px;
+  min-height: 48px;
+}
+button:disabled {
+  cursor: default;
+}
+select,
+input:not([type="range"]):not([type="checkbox"]) {
+  font-size: 16px;
+  min-width: 0;
+}
+.volume-grid {
+  gap: 10px;
+}
+.volume-grid button {
+  font-size: 23px;
+  min-height: 76px;
+}
+.volume-grid button > span {
+  font-size: 13px;
+  color: #68795b;
+}
+.bottle-summary {
+  font-size: 14px;
+  padding: 15px;
+}
+.bottle-summary .text-button {
+  font-size: 13px;
+  min-height: 30px;
+}
+.amount-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 20px 0 25px;
+}
+.amount-card {
+  border: 1px solid #dce6d0;
+  border-radius: 16px;
+  padding: 17px 13px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+}
+.amount-card > span {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #526647;
+  min-height: 42px;
+}
+.amount-card strong {
+  font-size: 36px;
+  line-height: 1.1;
+  font-weight: 750;
+  letter-spacing: -1px;
+  font-variant-numeric: tabular-nums;
+}
+.amount-card small {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.remaining-card {
+  background: #f5eddc;
+  border-color: #e7d6b5;
+  color: #806333;
+}
+.remaining-card > span {
+  color: #806333;
+}
+.range-labels {
+  font-size: 12px;
+  color: #68795b;
+}
+.volume-slider {
+  height: 12px;
+  min-height: 24px;
+  background: transparent;
+}
+.consumed-controls button {
+  font-size: 14px;
+  min-width: 76px;
+  min-height: 44px;
+}
+.consumed-controls > span {
+  font-size: 12px;
+  color: #6d795e;
+}
+.checkbox-options label {
+  font-size: 14px;
+  min-height: 50px;
+}
+.feeding-datetime {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
+.feeding-datetime input {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+  padding: 12px 10px !important;
+}
+.feeding-datetime input::-webkit-date-and-time-value {
+  text-align: left;
+  min-width: 0;
+}
+.feeding-datetime input::-webkit-datetime-edit {
+  display: inline-flex;
+  padding: 0;
+}
+.form-error {
+  font-size: 14px;
+}
+.dialog-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.dialog-actions .secondary {
+  margin-top: 0;
+}
+.danger-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #a45f49;
+  color: white;
+  font-size: 15px;
+}
+.delete-summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid #e7e8da;
+  border-radius: 14px;
+  background: #f5f4ea;
+  margin-bottom: 20px;
+}
+.delete-summary > span {
+  font-size: 32px;
+}
+.delete-summary strong {
+  font-size: 16px;
+}
+.delete-summary p,
+.trash-description {
+  font-size: 14px;
+  color: #707b62;
+  line-height: 1.7;
+}
+.delete-summary p {
+  margin-top: 5px;
+}
+.trash-description {
+  margin: -5px 0 16px;
+}
+.trash-toggle {
+  min-height: 40px;
+}
+.toast {
+  font-size: 14px;
+}
+@media (max-width: 1000px) {
+  .record {
+    flex-wrap: wrap;
+  }
+  .record-name {
+    min-width: 100px;
+  }
+  .record-actions {
+    margin-left: auto;
+  }
+}
+@media (max-width: 560px) {
+  .header {
+    height: auto;
+    min-height: 82px;
+    padding-block: 17px;
+  }
+  .header nav button {
+    font-size: 12px;
+  }
+  .compact-hero {
+    padding: 23px 0 25px;
+  }
+  .compact-hero h1 {
+    font-size: 27px;
+    margin-bottom: 15px;
+  }
+  .compact-hero .clock-card {
+    margin-top: 0;
+    padding: 15px 17px;
+  }
+  .clock-label {
+    font-size: 13px;
+  }
+  .clock-bottom,
+  .clock-bottom button {
+    font-size: 12px;
+  }
+  .section-heading h2 {
+    font-size: 17px;
+  }
+  .subtle,
+  .text-button {
+    font-size: 12px;
+  }
+  .child-card {
+    padding-inline: 15px;
+  }
+  .child-hint {
+    font-size: 12px;
+  }
+  .last-feeding > span {
+    font-size: 12px;
+    align-items: flex-start;
+  }
+  .last-feeding > span svg {
+    width: 12px;
+    margin-top: 3px;
+  }
+  .last-feeding strong {
+    font-size: 31px;
+    display: block;
+  }
+  .last-feeding small {
+    font-size: 12px;
+    display: block;
+    margin-top: 4px;
+    letter-spacing: 0;
+  }
+  .child-footer {
+    font-size: 12px;
+    min-height: 70px;
+  }
+  .child-footer span {
+    min-width: 0;
+  }
+  .child-footer svg {
+    width: 16px;
+  }
+  .record,
+  .stats-section .record {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto auto;
+    column-gap: 8px;
+    row-gap: 10px;
+    padding: 16px 12px;
+  }
+  .record-avatar {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .record-name,
+  .stats-section .record-name {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+  }
+  .record-name strong {
+    font-size: 15px;
+  }
+  .record-name > span,
+  .record-ml > span {
+    font-size: 12px;
+  }
+  .record-ml,
+  .stats-section .record-ml {
+    grid-column: 3;
+    grid-row: 1;
+    min-width: 45px;
+  }
+  .record-ml strong {
+    font-size: 17px;
+  }
+  .record-ml small {
+    font-size: 12px;
+  }
+  .record-actions {
+    grid-column: 4;
+    grid-row: 1;
+    gap: 0;
+  }
+  .record-actions .icon-btn {
+    min-width: 36px;
+    min-height: 44px;
+    padding: 5px;
+  }
+  .record-actions .icon-btn svg {
+    width: 17px;
+  }
+  .spit-badge,
+  .stats-section .spit-badge {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: auto;
+    justify-self: start;
+    font-size: 12px;
+    padding: 6px 9px;
+    background: #f1f5e8;
+    border: 1px solid #e1e8d5;
+  }
+  .spit-badge.yes {
+    background: #fcf0e6;
+    border-color: #f0dfce;
+  }
+  .spit-badge::first-letter {
+    font-size: inherit;
+  }
+  .record-interval,
+  .stats-section .record-interval {
+    grid-column: 3 / -1;
+    grid-row: 2;
+    justify-self: end;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+  }
+  .record-interval > span {
+    font-size: 12px;
+  }
+  .record-interval strong,
+  .stats-section .record-interval strong {
+    font-size: 14px;
+  }
+  .record:has(.record-interval) .spit-badge {
+    grid-column: 1 / 3;
+    max-width: 100%;
+  }
+  .restore-button {
+    max-width: 112px;
+    font-size: 12px;
+  }
+  .metric p,
+  .chart-card .subtle,
+  .chart-legend,
+  .stats-caption {
+    font-size: 12px;
+  }
+  .segmented button,
+  .stats-toolbar select {
+    font-size: 13px;
+  }
+  .chart-card .section-heading {
+    flex-wrap: wrap;
+  }
+  .chart-day {
+    font-size: 10px;
+  }
+  .many-days .chart-value {
+    font-size: 0;
+  }
+  .many-days .chart-day {
+    font-size: 9px;
+  }
+  .care-note p {
+    font-size: 13px;
+  }
+  footer,
+  .connection-status {
+    font-size: 12px;
+  }
+  .demo-banner,
+  .error-banner,
+  .connect-banner,
+  .demo-banner button,
+  .error-banner button,
+  .connect-banner button {
+    font-size: 13px;
+  }
+  .volume-grid {
+    gap: 7px;
+  }
+  .volume-grid button {
+    font-size: 21px;
+    min-height: 70px;
+  }
+  .volume-grid button > span {
+    font-size: 13px;
+  }
+  .checkbox-options label {
+    font-size: 13px;
+    padding: 13px 10px;
+  }
+  .feeding-datetime {
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+    gap: 8px;
+  }
+  .feeding-datetime input {
+    font-size: 16px;
+  }
+  .toast {
+    font-size: 13px;
+  }
+}
+@media (max-width: 360px) {
+  .children-grid {
+    grid-template-columns: 1fr;
+  }
+  .child-card {
+    padding-inline: 20px;
+  }
+  .last-feeding strong {
+    display: flex;
+  }
+  .record,
+  .stats-section .record {
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+  }
+  .record-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 18px;
+  }
+  .record-actions {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    justify-self: end;
+  }
+  .record-interval,
+  .stats-section .record-interval {
+    grid-column: 3;
+  }
+  .record:has(.record-interval) .spit-badge {
+    grid-column: 1 / 3;
+  }
+  .volume-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (max-width: 560px) {
+  .stats-section > .section-heading {
+    flex-wrap: wrap;
+  }
+  .stats-section > .section-heading > .subtle {
+    flex-basis: 100%;
+  }
+}
+.consumed-controls { gap: 12px; }
+.consumed-controls button { flex: 1; }
+@media (max-width: 360px) {
+  .amount-card { padding: 14px 10px; }
+  .amount-card strong { font-size: 30px; white-space: nowrap; }
+  .amount-card small { font-size: 15px; }
+  .amount-card > span { font-size: 13px; }
+  .feeding-datetime { grid-template-columns: minmax(0, 1fr); }
+}

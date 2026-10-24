@@ -18,9 +18,12 @@ import {
   Settings2,
   ShieldCheck,
   X,
+  Trash2,
+  RotateCcw,
 } from "lucide-react";
 import {
   API_URL,
+  REVIEW_MODE,
   CHILDREN,
   readStored,
   store,
@@ -83,6 +86,11 @@ function App() {
   const [key, setKey] = useState(() => readStored("amam.key", ""));
   const [records, setRecords] = useState([]);
   const [latest, setLatest] = useState([]);
+  const [trash, setTrash] = useState([]);
+  const [showTrash, setShowTrash] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [actionBusy, setActionBusy] = useState(false);
+  const [actionError, setActionError] = useState("");
   const [demo, setDemo] = useState(
     () => readStored("amam.demo", null) || demoFeedings(),
   );
@@ -97,7 +105,12 @@ function App() {
   const demoMode = mode === "demo";
   const connected = Boolean(key && API_URL);
   const today = dateKey(now, offset);
-  const data = demoMode ? demo : records;
+  const data = (demoMode ? demo : records).filter((r) => !r.deletedAt);
+  const trashed = demoMode
+    ? demo
+        .filter((r) => r.deletedAt)
+        .sort((a, b) => +new Date(b.deletedAt) - +new Date(a.deletedAt))
+    : trash;
   const allLatest = demoMode
     ? CHILDREN.map(
         (c) =>
@@ -121,10 +134,14 @@ function App() {
         items.push(...batch.items);
         cursor = batch.nextCursor;
       } while (cursor);
-      const last = await request("/feedings/latest");
+      const [last, deleted] = await Promise.all([
+        request("/feedings/latest"),
+        request("/feedings/trash"),
+      ]);
       if (id === loadId.current) {
         setRecords(items);
         setLatest(last.items);
+        setTrash(deleted.items);
         setError("");
       }
     } catch (e) {
@@ -159,12 +176,59 @@ function App() {
     setMode(value);
     setRecords([]);
     setLatest([]);
+    setTrash([]);
+    setShowTrash(false);
     setError("");
     setModal(null);
   }
   function start(child, record = null) {
     setEditing({ child, record });
     setModal("feeding");
+  }
+  async function changeRecordStatus(record, restore = false) {
+    if (actionBusy) return;
+    setActionBusy(true);
+    setActionError("");
+    try {
+      const saved = demoMode
+        ? restore
+          ? Object.fromEntries(
+              Object.entries(record).filter(([key]) => key !== "deletedAt"),
+            )
+          : { ...record, deletedAt: new Date().toISOString() }
+        : await request(`/feedings/${record._id}${restore ? "/restore" : ""}`, {
+            method: restore ? "POST" : "DELETE",
+          });
+      if (demoMode) {
+        const next = demo.map((r) => (r._id === saved._id ? saved : r));
+        store("amam.demo", next);
+        setDemo(next);
+      } else {
+        // Update visible totals immediately, then reconcile with the server.
+        ++loadId.current;
+        setRecords((previous) =>
+          restore
+            ? [saved, ...previous.filter((r) => r._id !== saved._id)]
+            : previous.filter((r) => r._id !== saved._id),
+        );
+        setTrash((previous) =>
+          restore
+            ? previous.filter((r) => r._id !== saved._id)
+            : [saved, ...previous.filter((r) => r._id !== saved._id)],
+        );
+        if (!restore)
+          setLatest((previous) => previous.filter((r) => r._id !== saved._id));
+        load();
+      }
+      setDeleteTarget(null);
+      setToast(
+        restore ? "Годування відновлено" : "Годування перенесено в кошик",
+      );
+    } catch (e) {
+      setActionError(e.message);
+    } finally {
+      setActionBusy(false);
+    }
   }
   const todayRecords = data.filter((r) => dateKey(r.fedAt, offset) === today);
   const todayMl = todayRecords.reduce((s, r) => s + r.consumedMl, 0);
@@ -211,7 +275,7 @@ function App() {
     ),
   );
 
-  function recordList(items, isStats = false) {
+  function recordList(items, isStats = false, isTrash = false) {
     if (!items.length)
       return (
         <div className="empty">
@@ -219,12 +283,16 @@ function App() {
           <h3>
             {loading
               ? "Завантажуємо годування…"
-              : "Тут починається ваша історія"}
+              : isTrash
+                ? "Кошик порожній"
+                : "Ще немає годувань"}
           </h3>
           <p>
             {loading
               ? "Ще мить — і все буде на місці."
-              : "Додайте перше годування — ми запам’ятаємо час і кожну краплинку."}
+              : isTrash
+                ? "Видалені записи можна буде відновити тут."
+                : "Оберіть малюка, щоб додати годування."}
           </p>
         </div>
       );
@@ -265,13 +333,37 @@ function App() {
               <span className={`spit-badge ${r.spitUp ? "yes" : ""}`}>
                 {r.spitUp ? "💧 Було зригування" : "✨ Без зригування"}
               </span>
-              <button
-                className="icon-btn"
-                aria-label={`Редагувати годування ${child.name}, ${timeLabel(r.fedAt, offset)}`}
-                onClick={() => start(child, r)}
-              >
-                <Pencil size={16} />
-              </button>
+              <div className="record-actions">
+                {isTrash ? (
+                  <button
+                    className="restore-button"
+                    disabled={actionBusy}
+                    onClick={() => changeRecordStatus(r, true)}
+                  >
+                    <RotateCcw size={17} /> Відновити
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      className="icon-btn"
+                      aria-label={`Редагувати годування ${child.name}, ${timeLabel(r.fedAt, offset)}`}
+                      onClick={() => start(child, r)}
+                    >
+                      <Pencil size={16} />
+                    </button>
+                    <button
+                      className="icon-btn delete-record"
+                      aria-label={`Видалити годування ${child.name}, ${timeLabel(r.fedAt, offset)}`}
+                      onClick={() => {
+                        setActionError("");
+                        setDeleteTarget(r);
+                      }}
+                    >
+                      <Trash2 size={17} />
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           );
         })}
@@ -320,14 +412,19 @@ function App() {
       <main>
         {demoMode && (
           <div className="demo-banner">
-            <span>🌱 Демо-простір · ці записи лише для знайомства</span>
+            <span>
+              {REVIEW_MODE
+                ? "🌱 Локальний перегляд · демо-дані"
+                : "🌱 Спробуйте демо — справжні записи не змінюються"}
+            </span>
             <button
               onClick={() => {
-                changeMode("live");
+                if (!REVIEW_MODE) changeMode("live");
                 setModal("access");
               }}
             >
-              Підключити родину <ArrowRight size={14} />
+              {REVIEW_MODE ? "Про цей перегляд" : "Підключити родину"}{" "}
+              <ArrowRight size={14} />
             </button>
           </div>
         )}
@@ -341,47 +438,28 @@ function App() {
         )}
         {!demoMode && !connected && (
           <div className="connect-banner">
-            <span>
-              🔐 Підключіть сімейний щоденник, щоб зберігати годування.
-            </span>
+            <span>🔐 Ваш щоденник — за сімейним кодом.</span>
+            <button onClick={() => changeMode("demo")}>
+              🌱 Спробувати демо
+            </button>
             <button onClick={() => setModal("access")}>
               Увійти <ArrowRight size={15} />
             </button>
           </div>
         )}
-        <section className="hero">
-          <div>
-            <p className="eyebrow">
-              <span /> МАЛЕНЬКІ МОМЕНТИ, ЩОДНЯ
-            </p>
-            <h1>
-              {page === "home" ? (
-                <>
-                  Маленькі годування.
-                  <br />
-                  <span>Велика турбота.</span>
-                </>
-              ) : (
-                <>
-                  Кожна краплинка
-                  <br />
-                  <span>має свою історію.</span>
-                </>
-              )}
-            </h1>
-            <p className="hero-text">
-              {page === "home"
-                ? "Трохи менше пам’ятати. Трохи більше бути поруч 🤍"
-                : "Годування, інтервали й маленькі спостереження — в одному місці."}
-            </p>
-          </div>
+        <section className="hero compact-hero">
+          <h1>{page === "home" ? "Годування" : "Статистика"}</h1>
           <div className="clock-card">
             <div className="clock-label">
-              <Clock3 size={15} /> ЗАРАЗ САМЕ ЧАС
+              <Clock3 size={16} /> Поточний час
             </div>
             <div className="clock-time">
               {timeLabel(now, offset)}
-              <Asterisk className="clock-spark" aria-hidden="true" strokeWidth={1.5} />
+              <Asterisk
+                className="clock-spark"
+                aria-hidden="true"
+                strokeWidth={1.5}
+              />
             </div>
             <div className="clock-bottom">
               <span>
@@ -453,9 +531,17 @@ function App() {
                         <ArrowRight size={18} />
                       </div>
                       {child.id === "leon" ? (
-                        <Asterisk className="card-decoration" aria-hidden="true" strokeWidth={1.5} />
+                        <Asterisk
+                          className="card-decoration"
+                          aria-hidden="true"
+                          strokeWidth={1.5}
+                        />
                       ) : (
-                        <Flower2 className="card-decoration" aria-hidden="true" strokeWidth={1.5} />
+                        <Flower2
+                          className="card-decoration"
+                          aria-hidden="true"
+                          strokeWidth={1.5}
+                        />
                       )}
                     </button>
                   );
@@ -540,7 +626,11 @@ function App() {
                   Ви дбаєте про малечу.
                   <br />А ми — про маленькі деталі.
                 </p>
-                <Asterisk className="note-flower" aria-hidden="true" strokeWidth={1.5} />
+                <Asterisk
+                  className="note-flower"
+                  aria-hidden="true"
+                  strokeWidth={1.5}
+                />
               </div>
             </aside>
           </div>
@@ -640,16 +730,47 @@ function App() {
               )}
             </div>
             <div className="section-heading">
-              <h2>Щоденник годувань</h2>
+              <h2>{showTrash ? "Кошик" : "Щоденник годувань"}</h2>
+              <button
+                className="text-button trash-toggle"
+                aria-pressed={showTrash}
+                onClick={() => {
+                  setActionError("");
+                  setShowTrash(!showTrash);
+                }}
+              >
+                {showTrash ? <History size={17} /> : <Trash2 size={17} />}{" "}
+                {showTrash
+                  ? "До історії"
+                  : `Кошик${trashed.length ? ` (${trashed.length})` : ""}`}
+              </button>
               <span className="subtle">
-                {prettyDate(firstDay, { day: "numeric", month: "short" })} —{" "}
-                {prettyDate(today, { day: "numeric", month: "short" })}
+                {showTrash
+                  ? "За весь час"
+                  : `${prettyDate(firstDay, { day: "numeric", month: "short" })} — ${prettyDate(today, { day: "numeric", month: "short" })}`}
               </span>
             </div>
-            {recordList(filtered, true)}
+            {showTrash && (
+              <p className="trash-description">
+                Ці записи не впливають на статистику. Їх можна відновити.
+              </p>
+            )}
+            {actionError && !deleteTarget && (
+              <p className="form-error" role="alert">
+                {actionError}
+              </p>
+            )}
+            {showTrash
+              ? recordList(
+                  trashed.filter(
+                    (r) => filter === "all" || r.childId === filter,
+                  ),
+                  false,
+                  true,
+                )
+              : recordList(filtered, true)}
             <p className="stats-caption">
-              Інтервали рахуємо окремо для кожного малюка між послідовними
-              годуваннями. Час: {offsetLabel(offset)}.
+              Інтервали — окремо для кожного малюка · {offsetLabel(offset)}
             </p>
           </section>
         )}
@@ -769,6 +890,55 @@ function App() {
           }}
         />
       )}
+      {deleteTarget && (
+        <Dialog
+          title="Видалити годування?"
+          close={() => {
+            if (!actionBusy) setDeleteTarget(null);
+          }}
+        >
+          <div className="delete-summary">
+            <span>
+              {CHILDREN.find((c) => c.id === deleteTarget.childId)?.emoji}
+            </span>
+            <div>
+              <strong>
+                {CHILDREN.find((c) => c.id === deleteTarget.childId)?.name} ·{" "}
+                {deleteTarget.consumedMl} мл
+              </strong>
+              <p>
+                {prettyDate(dateKey(deleteTarget.fedAt, offset))} о{" "}
+                {timeLabel(deleteTarget.fedAt, offset)}
+              </p>
+            </div>
+          </div>
+          <p className="modal-description">
+            Запис зникне зі статистики. Його можна буде відновити з кошика.
+          </p>
+          {actionError && (
+            <p className="form-error" role="alert">
+              {actionError}
+            </p>
+          )}
+          <div className="dialog-actions">
+            <button
+              className="secondary"
+              disabled={actionBusy}
+              onClick={() => setDeleteTarget(null)}
+            >
+              Залишити
+            </button>
+            <button
+              className="danger-button"
+              disabled={actionBusy}
+              onClick={() => changeRecordStatus(deleteTarget)}
+            >
+              <Trash2 size={17} />
+              {actionBusy ? "Видаляємо…" : "У кошик"}
+            </button>
+          </div>
+        </Dialog>
+      )}
       {toast && (
         <div className="toast" role="status">
           <Check size={18} />
@@ -827,7 +997,9 @@ function AccessDialog({
       </p>
       {!API_URL && (
         <p className="form-error">
-          API ще не налаштовано. Доступний демо-режим.
+          {REVIEW_MODE
+            ? "Це локальний перегляд. Підключення до справжніх записів вимкнено."
+            : "API ще не налаштовано. Доступний демо-режим."}
         </p>
       )}
       {connected && !demoMode ? (
@@ -887,8 +1059,8 @@ function AccessDialog({
 
 function FeedingDialog({ child, record, offset, demoMode, close, onSaved }) {
   const [step, setStep] = useState(record ? 2 : 1);
-  const [offered, setOffered] = useState(record?.offeredMl || 120);
-  const [consumed, setConsumed] = useState(record?.consumedMl ?? 120);
+  const [offered, setOffered] = useState(record?.offeredMl ?? null);
+  const [consumed, setConsumed] = useState(record?.consumedMl ?? 0);
   const [spitUp, setSpitUp] = useState(record?.spitUp || false);
   const [at, setAt] = useState(localInput(record?.fedAt || Date.now(), offset));
   const [busy, setBusy] = useState(false);
@@ -898,7 +1070,7 @@ function FeedingDialog({ child, record, offset, demoMode, close, onSaved }) {
   const payloadRef = useRef(null);
   async function submit(e) {
     e.preventDefault();
-    if (busy) return;
+    if (busy || step !== 2 || offered === null) return;
     const fedAt =
       at === localInput(fixedAt, offset) ? fixedAt : inputISO(at, offset);
     if (
@@ -945,22 +1117,10 @@ function FeedingDialog({ child, record, offset, demoMode, close, onSaved }) {
         if (!busy) close();
       }}
     >
-      <div className="steps">
-        <span className={step === 1 ? "current" : "done"}>
-          1 <b>Пляшечка</b>
-        </span>
-        <div />
-        <span className={step === 2 ? "current" : ""}>
-          2 <b>Як поїли</b>
-        </span>
-      </div>
       <form onSubmit={submit}>
         {step === 1 ? (
           <>
-            <h3 className="step-title">Скільки молочка приготували? 🍼</h3>
-            <p className="modal-description">
-              Оберіть початковий об’єм пляшечки.
-            </p>
+            <h3 className="step-title">Об’єм пляшечки 🍼</h3>
             <div className="volume-grid">
               {Array.from({ length: 10 }, (_, i) => (i + 1) * 30).map((n) => (
                 <button
@@ -982,7 +1142,9 @@ function FeedingDialog({ child, record, offset, demoMode, close, onSaved }) {
             <button
               className="primary"
               type="button"
+              disabled={offered === null}
               onClick={() => {
+                if (offered === null) return;
                 if (!record) setConsumed(offered);
                 setStep(2);
               }}
@@ -1005,10 +1167,26 @@ function FeedingDialog({ child, record, offset, demoMode, close, onSaved }) {
                 <Pencil size={14} /> Редагувати
               </button>
             </div>
-            <h3 className="step-title">Скільки з’їв {child.name}? 😋</h3>
-            <div className="consumed-value">
-              {consumed}
-              <span>мл</span>
+            <h3 className="step-title">Як поїв {child.name}? 😋</h3>
+            <div
+              className="amount-summary"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              <div className={`amount-card ${child.color}`}>
+                <span>З’їв</span>
+                <strong>
+                  {consumed}
+                  <small> мл</small>
+                </strong>
+              </div>
+              <div className="amount-card remaining-card">
+                <span>Залишилось у пляшечці</span>
+                <strong>
+                  {offered - consumed}
+                  <small> мл</small>
+                </strong>
+              </div>
             </div>
             <input
               className={`volume-slider ${child.color}`}
@@ -1033,7 +1211,6 @@ function FeedingDialog({ child, record, offset, demoMode, close, onSaved }) {
               >
                 − 5 мл
               </button>
-              <span>Залишилось {offered - consumed} мл</span>
               <button
                 type="button"
                 disabled={
@@ -1062,19 +1239,31 @@ function FeedingDialog({ child, record, offset, demoMode, close, onSaved }) {
                 </label>
               ))}
             </div>
-            <label className="field-label" htmlFor="fed-at">
-              Час годування · {offsetLabel(offset)}
+            <label className="field-label" htmlFor="fed-date">
+              Дата й час годування · {offsetLabel(offset)}
             </label>
-            <input
-              id="fed-at"
-              required
-              type="datetime-local"
-              min="2020-01-01T00:00"
-              max={localInput(Date.now() + 60000, offset)}
-              value={at}
-              disabled={busy || Boolean(payloadRef.current)}
-              onChange={(e) => setAt(e.target.value)}
-            />
+            <div className="feeding-datetime">
+              <input
+                id="fed-date"
+                aria-label="Дата годування"
+                required
+                type="date"
+                min="2020-01-01"
+                max={localInput(Date.now() + 60000, offset).slice(0, 10)}
+                value={at.slice(0, 10)}
+                disabled={busy || Boolean(payloadRef.current)}
+                onChange={(e) => setAt(`${e.target.value}T${at.slice(11, 16)}`)}
+              />
+              <input
+                id="fed-time"
+                aria-label="Час годування"
+                required
+                type="time"
+                value={at.slice(11, 16)}
+                disabled={busy || Boolean(payloadRef.current)}
+                onChange={(e) => setAt(`${at.slice(0, 10)}T${e.target.value}`)}
+              />
+            </div>
             {error && (
               <p className="form-error" role="alert">
                 {error}
@@ -1090,11 +1279,11 @@ function FeedingDialog({ child, record, offset, demoMode, close, onSaved }) {
                 </>
               )}
             </button>
-            <p className="field-help center">
-              {demoMode
-                ? "🌱 Демо: запис залишиться лише в цьому браузері."
-                : "Можна буде відредагувати в історії 🤍"}
-            </p>
+            {demoMode && (
+              <p className="field-help center">
+                🌱 Демо · лише в цьому браузері
+              </p>
+            )}
           </>
         )}
       </form>

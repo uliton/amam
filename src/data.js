@@ -14,17 +14,22 @@ export const CHILDREN = [
     hint: "Наш маленький ведмедик",
   },
 ];
-export const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+export const REVIEW_MODE = import.meta.env.MODE === "review";
+// Review never connects to the production API, even if an API URL is present in the environment.
+export const API_URL = REVIEW_MODE
+  ? ""
+  : (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+const storageKey = (key) => (REVIEW_MODE ? `amam.review.${key}` : key);
 export function readStored(key, fallback) {
   try {
-    return JSON.parse(localStorage.getItem(key)) ?? fallback;
+    return JSON.parse(localStorage.getItem(storageKey(key))) ?? fallback;
   } catch {
     return fallback;
   }
 }
 export function store(key, value) {
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    localStorage.setItem(storageKey(key), JSON.stringify(value));
   } catch {
     /* Storage may be disabled. */
   }
