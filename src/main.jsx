@@ -6,6 +6,7 @@ import {
   BarChart3,
   Check,
   Clock3,
+  Download,
   Flower2,
   Heart,
   History,
@@ -40,6 +41,7 @@ import { Dialog } from "./ui";
 import { Workspace } from "./workspace";
 import { download } from "./family-client";
 import { exportCsv } from "./csv";
+import { loadFeedings, periodStatistics, feedingIntervals } from "./statistics";
 import "./families.css";
 import { FamilyEmojis } from "./family-emojis";
 
@@ -87,6 +89,9 @@ function App({
   const [toast, setToast] = useState("");
   const [filter, setFilter] = useState("all");
   const [period, setPeriod] = useState(7);
+  const [fullHistoryLoaded, setFullHistoryLoaded] = useState(false);
+  const allTime = period === "all";
+  const needsFullHistory = allTime || ["3m", "6m", "12m"].includes(period);
   const loadId = useRef(0);
   const connected = Boolean(family);
   const today = dateKey(now, offset);
@@ -109,22 +114,14 @@ function App({
     const id = ++loadId.current;
     setLoading(true);
     try {
-      const from = new Date(Date.now() - 32 * 86400000).toISOString();
-      let items = [],
-        cursor = "";
-      do {
-        const batch = await request(
-          `/feedings?from=${encodeURIComponent(from)}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
-        );
-        items.push(...batch.items);
-        cursor = batch.nextCursor;
-      } while (cursor);
+      const items = await loadFeedings(request, { allTime: needsFullHistory });
       const [last, deleted] = await Promise.all([
         request("/feedings/latest"),
         request("/feedings/trash"),
       ]);
       if (id === loadId.current) {
         setRecords(items);
+        setFullHistoryLoaded(needsFullHistory);
         setLatest(last.items);
         setTrash(deleted.items);
         setError("");
@@ -148,7 +145,7 @@ function App({
       clearInterval(t);
       ++loadId.current;
     };
-  }, []);
+  }, [needsFullHistory]);
   useEffect(() => {
     if (toast) {
       const t = setTimeout(() => setToast(""), 4500);
@@ -211,44 +208,19 @@ function App({
     (a, b) =>
       +new Date(b.fedAt) - +new Date(a.fedAt) || b._id.localeCompare(a._id),
   );
-  const previousInterval = (record) => {
-    const index = sorted.findIndex((r) => r._id === record._id);
-    const previous = sorted
-      .slice(index + 1)
-      .find((r) => r.childId === record.childId);
-    return previous
-      ? +new Date(record.fedAt) - +new Date(previous.fedAt)
-      : null;
-  };
-  const firstDay = dateKey(
-    new Date(`${today}T12:00:00Z`).getTime() - (period - 1) * 86400000,
-    0,
-  );
-  const filtered = sorted.filter(
-    (r) =>
-      dateKey(r.fedAt, offset) >= firstDay &&
-      dateKey(r.fedAt, offset) <= today &&
-      (filter === "all" || r.childId === filter),
+  const intervalByRecord = feedingIntervals(sorted);
+  const previousInterval = (record) => intervalByRecord.get(record._id) ?? null;
+  const waitingForHistory = needsFullHistory && !demoMode && !fullHistoryLoaded;
+  const { rows: filtered, firstDay, buckets, monthly } = periodStatistics(
+    waitingForHistory ? [] : sorted,
+    { period, childId: filter, today, offset },
   );
   const totalMl = filtered.reduce((s, r) => s + r.consumedMl, 0);
   const intervals = filtered.map(previousInterval).filter((x) => x !== null);
   const avgInterval = intervals.length
     ? elapsed(intervals.reduce((a, b) => a + b, 0) / intervals.length)
     : "—";
-  const days = Array.from({ length: period }, (_, i) =>
-    dateKey(
-      new Date(`${today}T12:00:00Z`).getTime() - (period - 1 - i) * 86400000,
-      0,
-    ),
-  );
-  const maxDay = Math.max(
-    1,
-    ...days.map((day) =>
-      filtered
-        .filter((r) => dateKey(r.fedAt, offset) === day)
-        .reduce((s, r) => s + r.consumedMl, 0),
-    ),
-  );
+  const maxDay = buckets.reduce((max, bucket) => Math.max(max, bucket.total), 1);
 
   function recordList(items, isStats = false, isTrash = false) {
     if (!items.length)
@@ -653,48 +625,70 @@ function App({
         ) : (
           <section className="stats-section">
             <div className="stats-toolbar">
-              <div className="segmented" aria-label="Дитина">
-                {[{ id: "all", name: "Усі", emoji: "👶" }, ...CHILDREN].map(
-                  (c) => (
-                    <button
-                      key={c.id}
-                      className={filter === c.id ? "selected" : ""}
-                      onClick={() => setFilter(c.id)}
-                    >
+              <label className="stats-filter stats-child-filter">
+                <span>Малюк</span>
+                <select
+                  aria-label="Малюк у статистиці"
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                >
+                  <option value="all">👶 Усі малюки</option>
+                  {CHILDREN.map((c) => (
+                    <option key={c.id} value={c.id}>
                       {c.emoji} {c.name}
-                    </button>
-                  ),
-                )}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="stats-period-actions">
+                <label className="stats-filter">
+                  <span>Період</span>
+                  <select
+                    aria-label="Період статистики"
+                    value={period}
+                    onChange={(e) =>
+                      setPeriod(["all", "3m", "6m", "12m"].includes(e.target.value)
+                        ? e.target.value : Number(e.target.value))
+                    }
+                  >
+                    <option value="1">Сьогодні</option>
+                    <option value="7">Останні 7 днів</option>
+                    <option value="30">Останні 30 днів</option>
+                    <option value="3m">Останні 3 місяці</option>
+                    <option value="6m">Останні 6 місяців</option>
+                    <option value="12m">Останній рік</option>
+                    <option value="all">Весь період</option>
+                  </select>
+                </label>
+                <button
+                  className="secondary stats-export"
+                  aria-label="Експорт CSV за обраними фільтрами"
+                  disabled={waitingForHistory}
+                  onClick={() =>
+                    download(
+                      "amam-feedings.csv",
+                      exportCsv(filtered, CHILDREN),
+                      "text/csv;charset=utf-8",
+                    )
+                  }
+                >
+                  <Download size={18} aria-hidden="true" />
+                  <span className="stats-export-label">Експорт</span> CSV
+                </button>
               </div>
-              <button
-                className="text-button"
-                onClick={() =>
-                  download(
-                    "amam-feedings.csv",
-                    exportCsv(filtered, CHILDREN),
-                    "text/csv;charset=utf-8",
-                  )
-                }
-              >
-                ↓ CSV
-              </button>
-              <select
-                aria-label="Період статистики"
-                value={period}
-                onChange={(e) => setPeriod(Number(e.target.value))}
-              >
-                <option value="1">Сьогодні</option>
-                <option value="7">Останні 7 днів</option>
-                <option value="30">Останні 30 днів</option>
-              </select>
             </div>
+            {waitingForHistory && (
+              <p className="stats-history-loading" role="status">
+                {error ? "Не вдалося завантажити всю історію. Спробуйте оновити дані." : "Завантажуємо всю історію…"}
+              </p>
+            )}
             <div className="metrics">
               <Metric
                 emoji="🍼"
                 label="Випито молочка"
-                value={`${totalMl} мл`}
+                value={waitingForHistory ? "—" : `${totalMl} мл`}
               />
-              <Metric emoji="🤍" label="Годувань" value={filtered.length} />
+              <Metric emoji="🤍" label="Годувань" value={waitingForHistory ? "—" : filtered.length} />
               <Metric
                 emoji="⏱️"
                 label="Середній інтервал"
@@ -703,14 +697,16 @@ function App({
               <Metric
                 emoji="💧"
                 label="Зі зригуванням"
-                value={filtered.filter((r) => r.spitUp).length}
+                value={waitingForHistory ? "—" : filtered.filter((r) => r.spitUp).length}
               />
             </div>
             <div className="chart-card">
               <div className="section-heading">
                 <div>
                   <h2>Годування у краплинках</h2>
-                  <p className="subtle">З’їдений об’єм за день, мл</p>
+                  <p className="subtle">
+                    З’їдений об’єм за {monthly ? "місяць" : "день"}, мл
+                  </p>
                 </div>
                 <div className="chart-legend">
                   {CHILDREN.map((c) => (
@@ -721,12 +717,11 @@ function App({
                   ))}
                 </div>
               </div>
-              <div className={`chart ${period === 30 ? "many-days" : ""}`}>
-                {days.map((day, i) => {
-                  const rows = filtered.filter(
-                    (r) => dateKey(r.fedAt, offset) === day,
-                  );
-                  const total = rows.reduce((s, r) => s + r.consumedMl, 0);
+              <div className={`chart ${allTime || monthly ? "all-time-chart" : period === 30 ? "many-days" : ""}`}>
+                {buckets.map(({ key: day, total, children }, i) => {
+                  const label = prettyDate(day, monthly
+                    ? { month: "short", year: "numeric" }
+                    : { day: "numeric", month: "short" });
                   return (
                     <div className="chart-column" key={day}>
                       <span className="chart-value">{total || ""}</span>
@@ -734,29 +729,29 @@ function App({
                         <div
                           className="bar-stack"
                           style={{ height: `${(total / maxDay) * 100}%` }}
-                          title={`${prettyDate(day)}: ${total} мл`}
+                          title={`${label}: ${total} мл`}
                         >
                           {[...CHILDREN].reverse().map((c) => (
                             <span
                               key={c.id}
                               className={c.color}
                               style={{
-                                height: `${total ? (rows.filter((r) => r.childId === c.id).reduce((s, r) => s + r.consumedMl, 0) / total) * 100 : 0}%`,
+                                height: `${total ? ((children.get(c.id) || 0) / total) * 100 : 0}%`,
                               }}
                             />
                           ))}
                         </div>
                       </div>
                       <span className="chart-day">
-                        {period < 30 || i % 5 === 0 || i === 29
-                          ? prettyDate(day, { day: "numeric", month: "short" })
+                        {allTime || monthly || period < 30 || i % 5 === 0 || i === 29
+                          ? label
                           : "·"}
                       </span>
                     </div>
                   );
                 })}
               </div>
-              {!filtered.length && (
+              {!filtered.length && !waitingForHistory && (
                 <p className="chart-empty">
                   За цей період ще немає годувань 🌱
                 </p>
@@ -778,9 +773,9 @@ function App({
                   : `Кошик${trashed.length ? ` (${trashed.length})` : ""}`}
               </button>
               <span className="subtle">
-                {showTrash
+                {showTrash || allTime
                   ? "За весь час"
-                  : `${prettyDate(firstDay, { day: "numeric", month: "short" })} — ${prettyDate(today, { day: "numeric", month: "short" })}`}
+                  : `${prettyDate(firstDay, { day: "numeric", month: "short", ...(monthly ? { year: "numeric" } : {}) })} — ${prettyDate(today, { day: "numeric", month: "short", ...(monthly ? { year: "numeric" } : {}) })}`}
               </span>
             </div>
             {showTrash && (
@@ -801,7 +796,7 @@ function App({
                   false,
                   true,
                 )
-              : recordList(filtered, true)}
+              : waitingForHistory ? null : recordList(filtered, true)}
             <p className="stats-caption">
               Інтервали — окремо для кожного малюка · {offsetLabel(offset)}
             </p>
