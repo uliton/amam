@@ -9,22 +9,17 @@ import {
   Flower2,
   Heart,
   History,
-  LogIn,
-  LogOut,
   Milk,
   Pencil,
   Plus,
   RefreshCw,
   Settings2,
-  ShieldCheck,
-  X,
   Trash2,
   RotateCcw,
 } from "lucide-react";
 import {
-  API_URL,
   REVIEW_MODE,
-  CHILDREN,
+  CHILDREN as DEFAULT_CHILDREN,
   readStored,
   store,
   elapsed,
@@ -33,7 +28,6 @@ import {
   localInput,
   inputISO,
   demoFeedings,
-  request,
 } from "./data";
 import "./styles.css";
 import {
@@ -42,6 +36,12 @@ import {
   REVIEW_INTEGRATIONS,
 } from "./integrations";
 import "./refinements.css";
+import { Dialog } from "./ui";
+import { Workspace } from "./workspace";
+import { download } from "./family-client";
+import { exportCsv } from "./csv";
+import "./families.css";
+import { FamilyEmojis } from "./family-emojis";
 
 const offsetLabel = (n) => `UTC${n >= 0 ? "+" : ""}${n}`;
 const prettyDate = (key, options = { day: "numeric", month: "long" }) =>
@@ -50,49 +50,26 @@ const prettyDate = (key, options = { day: "numeric", month: "long" }) =>
     timeZone: "UTC",
   });
 
-function Dialog({ title, children, close, className = "" }) {
-  const ref = useRef();
-  useEffect(() => {
-    const dialog = ref.current;
-    dialog.showModal();
-    return () => dialog.close();
-  }, []);
-  return (
-    <dialog
-      ref={ref}
-      className={className}
-      onCancel={(e) => {
-        e.preventDefault();
-        close();
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) close();
-      }}
-    >
-      <div className="dialog-head">
-        <h2>{title}</h2>
-        <button className="icon-btn" aria-label="Закрити" onClick={close}>
-          <X size={21} />
-        </button>
-      </div>
-      {children}
-    </dialog>
-  );
-}
-
-function App() {
+function App({
+  family,
+  children: CHILDREN,
+  role,
+  api: request,
+  demoMode,
+  onFamilies,
+  onExitDemo,
+}) {
+  const canWrite = demoMode || (role !== "viewer" && !family?.archived);
   const [now, setNow] = useState(Date.now());
-  const [offset, setOffset] = useState(() =>
-    readStored("amam.offset", -new Date().getTimezoneOffset() / 60),
+  const [offset, setOffset] = useState(
+    () =>
+      family?.offset ??
+      readStored("amam.offset", -new Date().getTimezoneOffset() / 60),
   );
   const [page, setPage] = useState("home");
   const [integrationPreview, setIntegrationPreview] = useState(false);
   const integrations =
     REVIEW_MODE && integrationPreview ? REVIEW_INTEGRATIONS : INTEGRATIONS;
-  const [mode, setMode] = useState(() =>
-    readStored("amam.mode", API_URL ? "live" : "demo"),
-  );
-  const [key, setKey] = useState(() => readStored("amam.key", ""));
   const [records, setRecords] = useState([]);
   const [latest, setLatest] = useState([]);
   const [trash, setTrash] = useState([]);
@@ -111,8 +88,7 @@ function App() {
   const [filter, setFilter] = useState("all");
   const [period, setPeriod] = useState(7);
   const loadId = useRef(0);
-  const demoMode = mode === "demo";
-  const connected = Boolean(key && API_URL);
+  const connected = Boolean(family);
   const today = dateKey(now, offset);
   const data = (demoMode ? demo : records).filter((r) => !r.deletedAt);
   const trashed = demoMode
@@ -172,30 +148,20 @@ function App() {
       clearInterval(t);
       ++loadId.current;
     };
-  }, [mode, key]);
+  }, []);
   useEffect(() => {
     if (toast) {
       const t = setTimeout(() => setToast(""), 4500);
       return () => clearTimeout(t);
     }
   }, [toast]);
-  function changeMode(value) {
-    ++loadId.current;
-    store("amam.mode", value);
-    setMode(value);
-    setRecords([]);
-    setLatest([]);
-    setTrash([]);
-    setShowTrash(false);
-    setError("");
-    setModal(null);
-  }
   function start(child, record = null) {
+    if (!canWrite) return;
     setEditing({ child, record });
     setModal("feeding");
   }
   async function changeRecordStatus(record, restore = false) {
-    if (actionBusy) return;
+    if (actionBusy || !canWrite) return;
     setActionBusy(true);
     setActionError("");
     try {
@@ -308,7 +274,12 @@ function App() {
     return (
       <div className="records">
         {items.map((r) => {
-          const child = CHILDREN.find((c) => c.id === r.childId);
+          const child = CHILDREN.find((c) => c.id === r.childId) || {
+            id: r.childId,
+            name: "Дитина",
+            emoji: "👶",
+            color: "sage",
+          };
           const interval = previousInterval(r);
           return (
             <div className="record" key={r._id}>
@@ -348,35 +319,36 @@ function App() {
                 >
                   {r.spitUp ? "💧" : "✨"}
                 </span>
-                {isTrash ? (
-                  <button
-                    className="restore-button"
-                    disabled={actionBusy}
-                    onClick={() => changeRecordStatus(r, true)}
-                  >
-                    <RotateCcw size={17} /> Відновити
-                  </button>
-                ) : (
-                  <>
+                {canWrite &&
+                  (isTrash ? (
                     <button
-                      className="icon-btn"
-                      aria-label={`Редагувати годування ${child.name}, ${timeLabel(r.fedAt, offset)}`}
-                      onClick={() => start(child, r)}
+                      className="restore-button"
+                      disabled={actionBusy}
+                      onClick={() => changeRecordStatus(r, true)}
                     >
-                      <Pencil size={16} />
+                      <RotateCcw size={17} /> Відновити
                     </button>
-                    <button
-                      className="icon-btn delete-record"
-                      aria-label={`Видалити годування ${child.name}, ${timeLabel(r.fedAt, offset)}`}
-                      onClick={() => {
-                        setActionError("");
-                        setDeleteTarget(r);
-                      }}
-                    >
-                      <Trash2 size={17} />
-                    </button>
-                  </>
-                )}
+                  ) : (
+                    <>
+                      <button
+                        className="icon-btn"
+                        aria-label={`Редагувати годування ${child.name}, ${timeLabel(r.fedAt, offset)}`}
+                        onClick={() => start(child, r)}
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        className="icon-btn delete-record"
+                        aria-label={`Видалити годування ${child.name}, ${timeLabel(r.fedAt, offset)}`}
+                        onClick={() => {
+                          setActionError("");
+                          setDeleteTarget(r);
+                        }}
+                      >
+                        <Trash2 size={17} />
+                      </button>
+                    </>
+                  ))}
               </div>
             </div>
           );
@@ -417,9 +389,9 @@ function App() {
             Статистика
           </button>
         </nav>
-        <button className="header-family" onClick={() => setModal("access")}>
-          <span className="family-emojis">🦁 🐻</span>
-          <span>Наша родина</span>
+        <button className="header-family" onClick={onFamilies}>
+          <FamilyEmojis children={CHILDREN} demoMode={demoMode} />
+          <span>{demoMode ? "Демо" : family.name}</span>
           <Settings2 size={16} />
         </button>
       </header>
@@ -442,12 +414,10 @@ function App() {
             )}
             <button
               onClick={() => {
-                if (!REVIEW_MODE) changeMode("live");
-                setModal("access");
+                onExitDemo();
               }}
             >
-              {REVIEW_MODE ? "Про цей перегляд" : "Підключити родину"}{" "}
-              <ArrowRight size={14} />
+              {"Мої родини"} <ArrowRight size={14} />
             </button>
           </div>
         )}
@@ -459,15 +429,18 @@ function App() {
             </button>
           </div>
         )}
-        {!demoMode && !connected && (
-          <div className="connect-banner">
-            <span>🔐 Ваш щоденник — за сімейним кодом.</span>
-            <button onClick={() => changeMode("demo")}>
-              🌱 Спробувати демо
-            </button>
-            <button onClick={() => setModal("access")}>
-              Увійти <ArrowRight size={15} />
-            </button>
+        {!demoMode && (
+          <div className="family-context">
+            <span>{family.name}</span>
+            <span>
+              {family.archived
+                ? "📦 Архів · лише перегляд"
+                : role === "viewer"
+                  ? "👀 Лише перегляд"
+                  : role === "owner"
+                    ? "🔑 Власник"
+                    : "🍼 Можна додавати годування"}
+            </span>
           </div>
         )}
         <section
@@ -519,27 +492,30 @@ function App() {
             <div className="main-column">
               <div className="section-heading">
                 <h2>
-                  Хто зголоднів? <span>👶</span>
+                  {canWrite ? "Хто зголоднів?" : "Малеча"} <span>👶</span>
                 </h2>
-                <span className="subtle">Оберіть малюка</span>
+                <span className="subtle">
+                  {canWrite ? "Оберіть малюка" : "Останні годування"}
+                </span>
               </div>
               <div className="children-grid">
-                {CHILDREN.map((child) => {
+                {CHILDREN.filter((c) => !c.archived).map((child) => {
                   const last = allLatest.find((r) => r.childId === child.id);
                   return (
                     <button
                       key={child.id}
                       className={`child-card ${child.color}`}
-                      onClick={() =>
-                        connected || demoMode
-                          ? start(child)
-                          : setModal("access")
-                      }
+                      disabled={!canWrite}
+                      onClick={() => start(child)}
                     >
                       <div className="child-top">
                         <span className="child-emoji">{child.emoji}</span>
                         <span className="child-plus">
-                          <Plus size={22} />
+                          {canWrite ? (
+                            <Plus size={22} />
+                          ) : (
+                            <History size={22} />
+                          )}
                         </span>
                       </div>
                       <h3>{child.name}</h3>
@@ -562,8 +538,10 @@ function App() {
                               Останнє о {timeLabel(last.fedAt, offset)} ·{" "}
                               <b>{last.consumedMl} мл</b>
                             </>
-                          ) : (
+                          ) : canWrite ? (
                             "Додамо перше годування?"
+                          ) : (
+                            "Ще немає годувань"
                           )}
                         </span>
                         <ArrowRight size={18} />
@@ -585,6 +563,15 @@ function App() {
                   );
                 })}
               </div>
+              {!CHILDREN.some((c) => !c.archived) && (
+                <div className="empty">
+                  <span>🌱</span>
+                  <h3>Діти в архіві</h3>
+                  <button className="text-button" onClick={onFamilies}>
+                    Відкрити родину
+                  </button>
+                </div>
+              )}
               <section className="history-section">
                 <div className="section-heading">
                   <h2>
@@ -667,7 +654,7 @@ function App() {
           <section className="stats-section">
             <div className="stats-toolbar">
               <div className="segmented" aria-label="Дитина">
-                {[{ id: "all", name: "Обидва", emoji: "👶" }, ...CHILDREN].map(
+                {[{ id: "all", name: "Усі", emoji: "👶" }, ...CHILDREN].map(
                   (c) => (
                     <button
                       key={c.id}
@@ -679,6 +666,18 @@ function App() {
                   ),
                 )}
               </div>
+              <button
+                className="text-button"
+                onClick={() =>
+                  download(
+                    "amam-feedings.csv",
+                    exportCsv(filtered, CHILDREN),
+                    "text/csv;charset=utf-8",
+                  )
+                }
+              >
+                ↓ CSV
+              </button>
               <select
                 aria-label="Період статистики"
                 value={period}
@@ -714,7 +713,12 @@ function App() {
                   <p className="subtle">З’їдений об’єм за день, мл</p>
                 </div>
                 <div className="chart-legend">
-                  <span className="sage" /> Леон <span className="peach" /> Лука
+                  {CHILDREN.map((c) => (
+                    <React.Fragment key={c.id}>
+                      <span className={c.color} /> {c.name}
+                      {c.archived ? " · архів" : ""}{" "}
+                    </React.Fragment>
+                  ))}
                 </div>
               </div>
               <div className={`chart ${period === 30 ? "many-days" : ""}`}>
@@ -806,11 +810,11 @@ function App() {
         <footer>
           <span className="footer-brand">am-am.</span>
           <span>
-            Зроблено з турботою для Леона й Луки <Heart size={12} />
+            З турботою про вашу родину <Heart size={12} />
           </span>
           <button
             className="connection-status"
-            onClick={() => setModal("access")}
+            onClick={onFamilies}
             aria-label="Налаштування сімейного щоденника"
           >
             <i
@@ -881,29 +885,9 @@ function App() {
           </button>
         </Dialog>
       )}
-      {modal === "access" && (
-        <AccessDialog
-          close={() => setModal(null)}
-          demoMode={demoMode}
-          connected={connected}
-          onDemo={() => changeMode("demo")}
-          onConnected={(value) => {
-            store("amam.key", value);
-            setKey(value);
-            changeMode("live");
-            setToast("Родину підключено 🤍");
-          }}
-          onLogout={() => {
-            store("amam.key", "");
-            setKey("");
-            setRecords([]);
-            setLatest([]);
-            setModal(null);
-          }}
-        />
-      )}
       {modal === "feeding" && (
         <FeedingDialog
+          request={request}
           child={editing.child}
           record={editing.record}
           offset={offset}
@@ -998,106 +982,15 @@ function Metric({ emoji, label, value }) {
   );
 }
 
-function AccessDialog({
-  close,
+function FeedingDialog({
+  child,
+  record,
+  offset,
   demoMode,
-  connected,
-  onConnected,
-  onDemo,
-  onLogout,
+  close,
+  onSaved,
+  request,
 }) {
-  const [value, setValue] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  async function submit(e) {
-    e.preventDefault();
-    setBusy(true);
-    setError("");
-    const previous = readStored("amam.key", "");
-    store("amam.key", value.trim());
-    try {
-      await request("/feedings/latest");
-      onConnected(value.trim());
-    } catch (e) {
-      store("amam.key", previous);
-      setError(e.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <Dialog
-      title="Наша родина 🦁 🐻"
-      close={() => {
-        if (!busy) close();
-      }}
-    >
-      <p className="modal-description">
-        Сімейний код відкриває ваш спільний щоденник на будь-якому пристрої.
-      </p>
-      {!API_URL && (
-        <p className="form-error">
-          {REVIEW_MODE
-            ? "Це локальний перегляд. Підключення до справжніх записів вимкнено."
-            : "API ще не налаштовано. Доступний демо-режим."}
-        </p>
-      )}
-      {connected && !demoMode ? (
-        <>
-          <div className="connected-box">
-            <ShieldCheck size={25} />
-            <span>Ваш сімейний щоденник підключено.</span>
-          </div>
-          <button className="secondary" onClick={onLogout}>
-            <LogOut size={16} /> Вийти на цьому пристрої
-          </button>
-        </>
-      ) : (
-        <form onSubmit={submit}>
-          <label className="field-label" htmlFor="family-key">
-            Сімейний код
-          </label>
-          <input
-            id="family-key"
-            type="password"
-            autoComplete="current-password"
-            required
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            placeholder="Введіть код доступу"
-          />
-          {error && (
-            <p className="form-error" role="alert">
-              {error}
-            </p>
-          )}
-          <button className="primary" disabled={!API_URL || busy}>
-            {busy ? (
-              "Підключаємо…"
-            ) : (
-              <>
-                <LogIn size={17} /> Підключити щоденник
-              </>
-            )}
-          </button>
-        </form>
-      )}
-      <button
-        className="text-button demo-link"
-        disabled={busy}
-        onClick={onDemo}
-      >
-        Поглянути демо 🌱
-      </button>
-      <p className="field-help">
-        Код зберігається лише в цьому браузері. Дані демо не надсилаються на
-        сервер.
-      </p>
-    </Dialog>
-  );
-}
-
-function FeedingDialog({ child, record, offset, demoMode, close, onSaved }) {
   const [step, setStep] = useState(record ? 2 : 1);
   const [offered, setOffered] = useState(record?.offeredMl ?? null);
   const [consumed, setConsumed] = useState(record?.consumedMl ?? 0);
@@ -1207,14 +1100,14 @@ function FeedingDialog({ child, record, offset, demoMode, close, onSaved }) {
                 <Pencil size={14} /> Редагувати
               </button>
             </div>
-            <h3 className="step-title">Як поїв {child.name}? 😋</h3>
+            <h3 className="step-title">Як поїли? 😋</h3>
             <div
               className="amount-summary"
               aria-live="polite"
               aria-atomic="true"
             >
               <div className={`amount-card ${child.color}`}>
-                <span>З’їв</span>
+                <span>З’їдено</span>
                 <strong>
                   {consumed}
                   <small> мл</small>
@@ -1331,4 +1224,6 @@ function FeedingDialog({ child, record, offset, demoMode, close, onSaved }) {
   );
 }
 
-createRoot(document.getElementById("root")).render(<App />);
+createRoot(document.getElementById("root")).render(
+  <Workspace FeedingApp={App} demoChildren={DEFAULT_CHILDREN} />,
+);

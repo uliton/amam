@@ -14,12 +14,18 @@ export const CHILDREN = [
     hint: "Наш маленький ведмедик",
   },
 ];
-export const REVIEW_MODE = import.meta.env.MODE === "review";
+export const FAMILY_REVIEW = import.meta.env.MODE === "families";
+export const REVIEW_MODE = import.meta.env.MODE === "review" || FAMILY_REVIEW;
 // Review never connects to the production API, even if an API URL is present in the environment.
-export const API_URL = REVIEW_MODE
-  ? ""
-  : (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
-const storageKey = (key) => (REVIEW_MODE ? `amam.review.${key}` : key);
+export const API_URL = FAMILY_REVIEW
+  ? "http://127.0.0.1:4311/api"
+  : REVIEW_MODE
+    ? ""
+    : (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+const storageKey = (key) =>
+  REVIEW_MODE
+    ? `${FAMILY_REVIEW ? "amam.families-review" : "amam.review"}.${key}`
+    : key;
 export function readStored(key, fallback) {
   try {
     return JSON.parse(localStorage.getItem(storageKey(key))) ?? fallback;
@@ -68,32 +74,4 @@ export function demoFeedings() {
     spitUp: i % 7 === 0,
     fedAt: new Date(now - (i * 80 + 48) * 60000).toISOString(),
   })).map((x) => ({ ...x, consumedMl: Math.min(x.consumedMl, x.offeredMl) }));
-}
-export async function request(path, options = {}) {
-  if (!API_URL) throw new Error("Адресу API ще не налаштовано.");
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
-  try {
-    const response = await fetch(`${API_URL}${path}`, {
-      ...options,
-      signal: controller.signal,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${readStored("amam.key", "")}`,
-        ...options.headers,
-      },
-    });
-    const data = await response.json();
-    if (!response.ok)
-      throw new Error(data.error || "Сервер тимчасово недоступний.");
-    return data;
-  } catch (error) {
-    if (error.name === "AbortError" || error instanceof TypeError)
-      throw new Error(
-        "Немає зв’язку із сервером. Перевірте інтернет і спробуйте ще раз.",
-      );
-    throw error;
-  } finally {
-    clearTimeout(timeout);
-  }
 }
