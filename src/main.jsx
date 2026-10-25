@@ -36,6 +36,12 @@ import {
   request,
 } from "./data";
 import "./styles.css";
+import {
+  IntegrationSlot,
+  INTEGRATIONS,
+  REVIEW_INTEGRATIONS,
+} from "./integrations";
+import "./refinements.css";
 
 const offsetLabel = (n) => `UTC${n >= 0 ? "+" : ""}${n}`;
 const prettyDate = (key, options = { day: "numeric", month: "long" }) =>
@@ -80,6 +86,9 @@ function App() {
     readStored("amam.offset", -new Date().getTimezoneOffset() / 60),
   );
   const [page, setPage] = useState("home");
+  const [integrationPreview, setIntegrationPreview] = useState(false);
+  const integrations =
+    REVIEW_MODE && integrationPreview ? REVIEW_INTEGRATIONS : INTEGRATIONS;
   const [mode, setMode] = useState(() =>
     readStored("amam.mode", API_URL ? "live" : "demo"),
   );
@@ -330,10 +339,15 @@ function App() {
                   <strong>{interval === null ? "—" : elapsed(interval)}</strong>
                 </div>
               )}
-              <span className={`spit-badge ${r.spitUp ? "yes" : ""}`}>
-                {r.spitUp ? "💧 Було зригування" : "✨ Без зригування"}
-              </span>
               <div className="record-actions">
+                <span
+                  className={`spit-badge ${r.spitUp ? "yes" : ""}`}
+                  role="img"
+                  aria-label={r.spitUp ? "Було зригування" : "Без зригування"}
+                  title={r.spitUp ? "Було зригування" : "Без зригування"}
+                >
+                  {r.spitUp ? "💧" : "✨"}
+                </span>
                 {isTrash ? (
                   <button
                     className="restore-button"
@@ -417,6 +431,15 @@ function App() {
                 ? "🌱 Локальний перегляд · демо-дані"
                 : "🌱 Спробуйте демо — справжні записи не змінюються"}
             </span>
+            {REVIEW_MODE && (
+              <button
+                className="integration-preview-toggle"
+                aria-pressed={integrationPreview}
+                onClick={() => setIntegrationPreview(!integrationPreview)}
+              >
+                {integrationPreview ? "Без інтеграцій" : "Приклад інтеграції"}
+              </button>
+            )}
             <button
               onClick={() => {
                 if (!REVIEW_MODE) changeMode("live");
@@ -447,8 +470,23 @@ function App() {
             </button>
           </div>
         )}
-        <section className="hero compact-hero">
-          <h1>{page === "home" ? "Годування" : "Статистика"}</h1>
+        <section
+          className={`hero compact-hero ${page === "home" ? "home-hero" : ""}`}
+        >
+          {page === "home" ? (
+            <>
+              <h1 className="sr-only">Годування</h1>
+              <IntegrationSlot
+                placement="hero"
+                campaign={integrations.hero}
+                onPreview={
+                  REVIEW_MODE ? () => setModal("integration-preview") : null
+                }
+              />
+            </>
+          ) : (
+            <h1>Статистика</h1>
+          )}
           <div className="clock-card">
             <div className="clock-label">
               <Clock3 size={16} /> Поточний час
@@ -559,7 +597,7 @@ function App() {
                     Уся історія <ArrowRight size={15} />
                   </button>
                 </div>
-                {recordList(sorted.slice(0, 4))}
+                {recordList(sorted.slice(0, 4), true)}
               </section>
             </div>
             <aside>
@@ -616,22 +654,13 @@ function App() {
                   <b>{todayRecords.length}</b>
                 </div>
               </section>
-              <div className="care-note">
-                <span>🤍</span>
-                <h3>
-                  Кожна краплинка —<br />
-                  це трохи любові.
-                </h3>
-                <p>
-                  Ви дбаєте про малечу.
-                  <br />А ми — про маленькі деталі.
-                </p>
-                <Asterisk
-                  className="note-flower"
-                  aria-hidden="true"
-                  strokeWidth={1.5}
-                />
-              </div>
+              <IntegrationSlot
+                placement="care"
+                campaign={integrations.care}
+                onPreview={
+                  REVIEW_MODE ? () => setModal("integration-preview") : null
+                }
+              />
             </aside>
           </div>
         ) : (
@@ -801,6 +830,17 @@ function App() {
           </button>
         </footer>
       </main>
+      {modal === "integration-preview" && REVIEW_MODE && (
+        <Dialog title="Приклад інтеграції" close={() => setModal(null)}>
+          <p className="modal-description">
+            Це локальний макет для погодження вигляду. Бренд, текст і посилання
+            можна буде замінити для конкретного партнера.
+          </p>
+          <button className="primary" onClick={() => setModal(null)}>
+            Зрозуміло
+          </button>
+        </Dialog>
+      )}
       {modal === "timezone" && (
         <Dialog title="Ваш час 🌍" close={() => setModal(null)}>
           <p className="modal-description">

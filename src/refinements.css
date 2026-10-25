@@ -1,0 +1,441 @@
+/* Calm, reusable integration placements. No advertising is loaded by this component. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.home-hero.compact-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 310px;
+  gap: 24px;
+  align-items: stretch;
+  padding: 25px 0 32px;
+}
+.home-hero .clock-card {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.ambient-panel {
+  position: relative;
+  min-width: 0;
+  min-height: 132px;
+  overflow: hidden;
+  border-radius: 21px;
+  border: 1px solid #e5e7d8;
+  background: linear-gradient(115deg, #f3f2e8, #eef2e6 60%, #f6efe4);
+}
+.ambient-art {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+.ambient-orb--sage {
+  animation: ambient-sage 12s ease-in-out infinite;
+}
+.ambient-orb--peach {
+  animation: ambient-peach 10s ease-in-out infinite;
+}
+.ambient-star {
+  animation: ambient-breathe 8s ease-in-out infinite;
+}
+.ambient-wave {
+  animation: ambient-sage 15s ease-in-out infinite;
+}
+@keyframes ambient-sage {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(4px, -5px);
+  }
+}
+@keyframes ambient-peach {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(-4px, 4px);
+  }
+}
+@keyframes ambient-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.integration {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #dedfcd;
+  border-radius: 21px;
+  background: #eeefe1;
+  padding: 20px 24px;
+  color: #3f553a;
+}
+.integration-copy {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  flex: 1;
+}
+.integration-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 9px;
+  font-size: 12px;
+  color: #657357;
+}
+.integration-meta > span:first-child {
+  border: 1px solid #cfd6bb;
+  border-radius: 5px;
+  padding: 2px 6px;
+  font-size: 11px;
+}
+.integration-meta > span:last-child {
+  font-weight: 700;
+}
+.integration h2 {
+  font-size: 21px;
+  line-height: 1.3;
+  letter-spacing: -0.5px;
+  max-width: 440px;
+}
+.integration p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #657357;
+  margin-top: 7px;
+}
+.integration-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 750;
+  min-height: 36px;
+  padding: 5px 0;
+  margin-top: 5px;
+  color: #45613e;
+}
+.integration-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.integration-illustration {
+  width: 120px;
+  height: 120px;
+  position: relative;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+.integration-illustration > svg {
+  position: absolute;
+  width: 105px;
+  height: 105px;
+  inset: 6px;
+  color: #a8bb8d;
+  transform: rotate(-15deg);
+}
+.integration-petal {
+  position: absolute;
+  width: 84px;
+  height: 106px;
+  top: 7px;
+  left: 20px;
+  background: #dce5c8;
+  border-radius: 65% 35% 65% 35%;
+  transform: rotate(30deg);
+}
+.integration-illustration > span {
+  position: absolute;
+  height: 33px;
+  width: 33px;
+  border-radius: 50%;
+  background: #e7cdb5;
+  bottom: 2px;
+  right: 0;
+}
+.integration--care {
+  margin-top: 20px;
+  min-height: 250px;
+  padding: 23px;
+  display: block;
+}
+.integration--care h2 {
+  font-size: 20px;
+  max-width: 225px;
+}
+.integration--care p {
+  max-width: 220px;
+}
+.integration--care .integration-illustration {
+  position: absolute;
+  bottom: -28px;
+  right: -25px;
+  opacity: 0.65;
+}
+.demo-banner .integration-preview-toggle {
+  margin-left: auto;
+  border: 1px solid #cdd9bd;
+  border-radius: 8px;
+  padding: 7px 10px;
+  min-height: 34px;
+  background: #f8faf2;
+}
+.demo-banner .integration-preview-toggle[aria-pressed="true"] {
+  background: #dce8ce;
+}
+
+/* Cards share their internal rows; a wrapped label can no longer shift only one timer. */
+.children-grid .child-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  min-width: 0;
+}
+.children-grid .child-top {
+  width: 100%;
+}
+.children-grid .child-footer {
+  width: 100%;
+  margin-top: auto;
+  align-items: flex-start;
+}
+.children-grid .child-footer > svg {
+  margin-top: 3px;
+}
+@supports (grid-template-rows: subgrid) {
+  .children-grid .child-card {
+    display: grid;
+    grid-row: span 6;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: subgrid;
+    row-gap: 0;
+    align-content: start;
+    align-items: start;
+  }
+  .children-grid .last-feeding {
+    display: contents;
+  }
+  .children-grid .last-feeding > span {
+    padding-top: 24px;
+  }
+  .children-grid .last-feeding > strong {
+    padding-bottom: 22px;
+    min-width: 0;
+  }
+  .children-grid .child-footer {
+    margin-top: 0;
+    align-self: stretch;
+  }
+}
+
+/* Emoji status keeps its meaning available to screen readers and desktop tooltips. */
+.records .record .spit-badge,
+.records .record .spit-badge.yes {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 32px;
+  min-width: 28px;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  font-size: 20px;
+}
+.records .record .spit-badge::first-letter {
+  font-size: inherit;
+}
+.records .record .record-interval {
+  margin-right: 5px;
+  min-width: 88px;
+}
+.records .record .record-actions {
+  margin-left: 0;
+}
+@media (max-width: 800px) {
+  .home-hero.compact-hero {
+    grid-template-columns: minmax(0, 1fr) 240px;
+    gap: 18px;
+  }
+  .integration {
+    padding: 18px;
+    gap: 6px;
+  }
+  .integration h2 {
+    font-size: 19px;
+  }
+  .integration--hero .integration-illustration {
+    width: 76px;
+    height: 95px;
+  }
+  .integration--hero .integration-illustration > svg {
+    width: 80px;
+    height: 80px;
+    inset: 3px;
+  }
+  .integration--hero .integration-petal {
+    width: 60px;
+    height: 80px;
+    left: 5px;
+  }
+}
+@media (max-width: 680px) {
+  .records .record {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) 56px 28px;
+    column-gap: 9px;
+    row-gap: 5px;
+    align-items: center;
+    padding: 14px 12px;
+  }
+  .records .record .record-avatar {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .records .record .record-name {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+  }
+  .records .record .record-ml {
+    grid-column: 3 / 5;
+    grid-row: 1;
+    justify-self: end;
+    min-width: 0;
+  }
+  .records .record .spit-badge {
+    max-width: none;
+  }
+  .records .record .record-interval {
+    grid-column: 1 / 3;
+    grid-row: 2;
+    justify-self: start;
+    flex-direction: row;
+    gap: 8px;
+    align-items: center;
+    margin: 0;
+    min-width: 0;
+  }
+  .records .record .record-actions {
+    grid-column: 2 / 5;
+    grid-row: 2;
+    justify-self: end;
+  }
+  .records .record .record-interval > span {
+    font-size: 12px;
+  }
+  .records .record .record-interval strong {
+    font-size: 14px;
+  }
+  .records .record .restore-button {
+    font-size: 12px;
+    max-width: none;
+  }
+}
+@media (max-width: 680px) {
+  .home-hero.compact-hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding: 20px 0 26px;
+  }
+  .ambient-panel,
+  .ambient-art {
+    min-height: 86px;
+    height: 86px;
+  }
+  .home-hero .clock-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    margin: 0;
+    padding: 15px 18px;
+  }
+  .home-hero .clock-label {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .home-hero .clock-time {
+    grid-column: 2;
+    grid-row: 1 / 3;
+  }
+  .home-hero .clock-bottom {
+    grid-column: 1;
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+  }
+  .home-hero .clock-spark {
+    display: none;
+  }
+  .integration--hero {
+    min-height: 174px;
+    padding: 18px 20px;
+  }
+  .integration--hero h2 {
+    font-size: 20px;
+    max-width: 235px;
+  }
+  .integration--hero .integration-illustration {
+    position: absolute;
+    right: -12px;
+    bottom: -5px;
+    opacity: 0.65;
+  }
+  .integration--hero p {
+    max-width: 245px;
+  }
+  .integration--hero .integration-copy {
+    padding-right: 30px;
+  }
+  .integration--care {
+    padding: 23px;
+    min-height: 228px;
+  }
+  .demo-banner .integration-preview-toggle {
+    margin-left: 0;
+  }
+}
+@media (max-width: 360px) {
+  .records .record {
+    grid-template-columns: 28px minmax(0, 1fr) 50px 26px;
+    column-gap: 7px;
+  }
+  .records .record .spit-badge {
+    width: 26px;
+    min-width: 26px;
+    font-size: 19px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ambient-panel *,
+  .integration * {
+    animation: none;
+  }
+}
