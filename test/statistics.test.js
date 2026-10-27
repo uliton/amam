@@ -68,3 +68,42 @@ test("3/6/12 months follow the calendar across years, short months and leap days
     assert.equal(stats.buckets.reduce((sum, b) => sum + b.total, 0), 180);
   }
 });
+
+test("calendar month has 4, 5 or 6 Monday–Sunday buckets, including partial edges", () => {
+  for (const [today, count, firstEnd, lastStart] of [
+    ["2021-02-28", 4, "2021-02-07", "2021-02-22"],
+    ["2026-10-27", 5, "2026-10-04", "2026-10-26"],
+    ["2026-08-31", 6, "2026-08-02", "2026-08-31"],
+  ]) {
+    const stats = periodStatistics([], { period: "month", today, offset: 2 });
+    assert.equal(stats.firstDay, today.slice(0, 7) + "-01");
+    assert.equal(stats.buckets.length, count);
+    assert.equal(stats.weekly, true);
+    assert.equal(stats.buckets[0].start, stats.firstDay);
+    assert.equal(stats.buckets[0].end, firstEnd);
+    assert.equal(stats.buckets.at(-1).start, lastStart);
+  }
+});
+
+test("weekly month sums and feeding counts respect month/child/local-day boundaries", () => {
+  const records = [
+    row("before", "2026-09-30T21:59:59Z"),
+    row("first", "2026-09-30T22:00:00Z"),
+    row("sunday", "2026-10-04T21:59:59Z"),
+    row("monday", "2026-10-04T22:00:00Z"),
+    row("today", "2026-10-27T12:00:00Z"),
+    row("other", "2026-10-27T12:00:00Z", "b"),
+    row("future", "2026-10-28T12:00:00Z"),
+  ];
+  const stats = periodStatistics(records, { period: "month", childId: "a", today: "2026-10-27", offset: 2 });
+  assert.equal(stats.rows.length, 4);
+  assert.equal(stats.buckets[0].count, 2);
+  assert.equal(stats.buckets[1].count, 1);
+  assert.equal(stats.buckets.at(-1).count, 1);
+  assert.equal(stats.buckets.reduce((sum, b) => sum + b.count, 0), stats.rows.length);
+  assert.equal(stats.buckets.reduce((sum, b) => sum + b.total, 0), 360);
+  for (const period of [7, "3m", "all"]) {
+    const other = periodStatistics(records, { period, today: "2026-10-27", offset: 2 });
+    assert.equal(other.buckets.reduce((sum, b) => sum + b.count, 0), other.rows.length);
+  }
+});

@@ -601,6 +601,59 @@
 .stats-export:disabled {
   opacity: 0.55;
 }
+.feeding-volume {
+  display: inline-block;
+  white-space: nowrap;
+}
+.chart.chart-with-counts {
+  height: 250px;
+  overflow-x: auto;
+  gap: 12px;
+  justify-content: space-between;
+}
+.chart-with-counts .chart-column {
+  flex: 1 0 74px;
+  max-width: 110px;
+}
+.chart-with-counts .chart-value {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  flex-shrink: 0;
+  gap: 5px;
+  font-size: 14px;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: inherit;
+}
+.chart-with-counts .chart-value small {
+  font-size: 12px;
+}
+.chart-with-counts .chart-day {
+  font-size: 12px;
+  white-space: normal;
+  text-align: center;
+}
+.chart-with-counts.weekly-chart {
+  display: grid;
+  grid-template-columns: repeat(var(--week-count), minmax(0, 1fr));
+  gap: 6px;
+  overflow-x: visible;
+}
+.weekly-chart .chart-column {
+  max-width: none;
+}
+.weekly-chart .chart-value,
+.weekly-chart .chart-value small {
+  font-size: 12px;
+}
+.weekly-chart .chart-day small {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+}
 .stats-history-loading {
   margin-bottom: 18px;
   font-size: 15px;

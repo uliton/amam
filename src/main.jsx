@@ -211,7 +211,7 @@ function App({
   const intervalByRecord = feedingIntervals(sorted);
   const previousInterval = (record) => intervalByRecord.get(record._id) ?? null;
   const waitingForHistory = needsFullHistory && !demoMode && !fullHistoryLoaded;
-  const { rows: filtered, firstDay, buckets, monthly } = periodStatistics(
+  const { rows: filtered, firstDay, buckets, monthly, weekly } = periodStatistics(
     waitingForHistory ? [] : sorted,
     { period, childId: filter, today, offset },
   );
@@ -415,23 +415,15 @@ function App({
             </span>
           </div>
         )}
-        <section
-          className={`hero compact-hero ${page === "home" ? "home-hero" : ""}`}
-        >
-          {page === "home" ? (
-            <>
-              <h1 className="sr-only">Годування</h1>
-              <IntegrationSlot
-                placement="hero"
-                campaign={integrations.hero}
-                onPreview={
-                  REVIEW_MODE ? () => setModal("integration-preview") : null
-                }
-              />
-            </>
-          ) : (
-            <h1>Статистика</h1>
-          )}
+        <section className="hero compact-hero home-hero">
+          <h1 className="sr-only">{page === "home" ? "Годування" : "Статистика"}</h1>
+          <IntegrationSlot
+            placement="hero"
+            campaign={integrations.hero}
+            onPreview={
+              REVIEW_MODE ? () => setModal("integration-preview") : null
+            }
+          />
           <div className="clock-card">
             <div className="clock-label">
               <Clock3 size={16} /> Поточний час
@@ -508,7 +500,7 @@ function App({
                           {last ? (
                             <>
                               Останнє о {timeLabel(last.fedAt, offset)} ·{" "}
-                              <b>{last.consumedMl} мл</b>
+                              <b className="feeding-volume">{last.consumedMl}{"\u00a0"}мл</b>
                             </>
                           ) : canWrite ? (
                             "Додамо перше годування?"
@@ -647,13 +639,13 @@ function App({
                     aria-label="Період статистики"
                     value={period}
                     onChange={(e) =>
-                      setPeriod(["all", "3m", "6m", "12m"].includes(e.target.value)
+                      setPeriod(["all", "month", "3m", "6m", "12m"].includes(e.target.value)
                         ? e.target.value : Number(e.target.value))
                     }
                   >
                     <option value="1">Сьогодні</option>
-                    <option value="7">Останні 7 днів</option>
-                    <option value="30">Останні 30 днів</option>
+                    <option value="7">Тиждень</option>
+                    <option value="month">Місяць</option>
                     <option value="3m">Останні 3 місяці</option>
                     <option value="6m">Останні 6 місяців</option>
                     <option value="12m">Останній рік</option>
@@ -705,7 +697,7 @@ function App({
                 <div>
                   <h2>Годування у краплинках</h2>
                   <p className="subtle">
-                    З’їдений об’єм за {monthly ? "місяць" : "день"}, мл
+                    {weekly ? "Об’єм, мл · 🍼 годувань за тиждень" : `Об’єм і кількість годувань за ${monthly ? "місяць" : "день"}`}
                   </p>
                 </div>
                 <div className="chart-legend">
@@ -717,19 +709,28 @@ function App({
                   ))}
                 </div>
               </div>
-              <div className={`chart ${allTime || monthly ? "all-time-chart" : period === 30 ? "many-days" : ""}`}>
-                {buckets.map(({ key: day, total, children }, i) => {
-                  const label = prettyDate(day, monthly
+              <div
+                className={`chart chart-with-counts${weekly ? " weekly-chart" : ""}`}
+                style={weekly ? { "--week-count": buckets.length } : undefined}
+              >
+                {buckets.map(({ key: day, start, end, total, count, children }) => {
+                  const weekRange = start === end ? String(Number(start.slice(-2))) : `${Number(start.slice(-2))}–${Number(end.slice(-2))}`;
+                  const label = weekly
+                    ? `${weekRange} ${prettyDate(end, { month: "short" })}`
+                    : prettyDate(day, monthly
                     ? { month: "short", year: "numeric" }
                     : { day: "numeric", month: "short" });
                   return (
-                    <div className="chart-column" key={day}>
-                      <span className="chart-value">{total || ""}</span>
+                    <div className="chart-column" key={day} aria-label={`${label}: ${total} мл · ${count} годувань`}>
+                      <span className="chart-value">
+                        <b>{total}{!weekly && <>{"\u00a0"}мл</>}</b>
+                        <small>{weekly ? <>🍼{count}</> : <>{count}{"\u00a0"}годув.</>}</small>
+                      </span>
                       <div className="bar-space">
                         <div
                           className="bar-stack"
                           style={{ height: `${(total / maxDay) * 100}%` }}
-                          title={`${label}: ${total} мл`}
+                          title={`${label}: ${total} мл · ${count} годувань`}
                         >
                           {[...CHILDREN].reverse().map((c) => (
                             <span
@@ -743,9 +744,7 @@ function App({
                         </div>
                       </div>
                       <span className="chart-day">
-                        {allTime || monthly || period < 30 || i % 5 === 0 || i === 29
-                          ? label
-                          : "·"}
+                        {weekly ? <>{weekRange}<small>{prettyDate(end, { month: "short" })}</small></> : label}
                       </span>
                     </div>
                   );

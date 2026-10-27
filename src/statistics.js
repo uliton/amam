@@ -1,9 +1,15 @@
 const dayKey = (date, offset) =>
   new Date(+new Date(date) + offset * 3600000).toISOString().slice(0, 10);
 const MONTH_PERIODS = { "3m": 3, "6m": 6, "12m": 12 };
+const weekStart = (day) => {
+  const date = new Date(`${day}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() - (date.getUTCDay() + 6) % 7);
+  return date.toISOString().slice(0, 10);
+};
 
 export function periodStart(today, period) {
   if (period === "all") return null;
+  if (period === "month") return `${today.slice(0, 7)}-01`;
   const date = new Date(`${today}T00:00:00Z`);
   const months = MONTH_PERIODS[period];
   if (months) {
@@ -56,24 +62,37 @@ export function periodStatistics(records, { period, childId = "all", today, offs
   const rowDays = rows.map(r => dayKey(r.fedAt, offset)).sort();
   const firstDay = allTime ? rowDays[0] || today : cutoff;
   const lastDay = allTime && rowDays.at(-1) > today ? rowDays.at(-1) : today;
+  const weekly = period === "month";
   const monthly = Boolean(MONTH_PERIODS[period]) || allTime && (+new Date(lastDay) - +new Date(firstDay)) / 86400000 >= 31;
-  const date = new Date(`${monthly ? firstDay.slice(0, 7) + "-01" : firstDay}T00:00:00Z`);
+  const date = new Date(`${weekly ? weekStart(firstDay) : monthly ? firstDay.slice(0, 7) + "-01" : firstDay}T00:00:00Z`);
   const end = new Date(`${lastDay}T00:00:00Z`);
+  if (weekly) end.setUTCMonth(end.getUTCMonth() + 1, 0);
+  const chartEnd = end.toISOString().slice(0, 10);
   const buckets = [];
   const byKey = new Map();
   while (date <= end) {
     const key = date.toISOString().slice(0, 10);
-    const bucket = { key, total: 0, children: new Map() };
+    const weekEnd = new Date(date);
+    weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
+    const bucket = {
+      key,
+      start: weekly && key < firstDay ? firstDay : key,
+      end: weekly ? [weekEnd.toISOString().slice(0, 10), chartEnd].sort()[0] : key,
+      total: 0,
+      count: 0,
+      children: new Map(),
+    };
     buckets.push(bucket);
     byKey.set(key, bucket);
     if (monthly) date.setUTCMonth(date.getUTCMonth() + 1);
-    else date.setUTCDate(date.getUTCDate() + 1);
+    else date.setUTCDate(date.getUTCDate() + (weekly ? 7 : 1));
   }
   for (const row of rows) {
     const day = dayKey(row.fedAt, offset);
-    const bucket = byKey.get(monthly ? `${day.slice(0, 7)}-01` : day);
+    const bucket = byKey.get(weekly ? weekStart(day) : monthly ? `${day.slice(0, 7)}-01` : day);
     bucket.total += row.consumedMl;
+    bucket.count++;
     bucket.children.set(row.childId, (bucket.children.get(row.childId) || 0) + row.consumedMl);
   }
-  return { rows, firstDay, buckets, monthly };
+  return { rows, firstDay, buckets, monthly, weekly };
 }
