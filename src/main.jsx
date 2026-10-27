@@ -616,6 +616,10 @@ function App({
           </div>
         ) : (
           <section className="stats-section">
+            <div className="section-heading stats-overview-heading">
+              <h2>Підсумки годувань <span>📊</span></h2>
+              <span className="subtle">Показники</span>
+            </div>
             <div className="stats-toolbar">
               <label className="stats-filter stats-child-filter">
                 <span>Малюк</span>

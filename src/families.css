@@ -543,6 +543,13 @@
 .segmented {
   flex-wrap: wrap;
 }
+.stats-section > .stats-overview-heading {
+  flex-wrap: nowrap;
+}
+.stats-section > .stats-overview-heading > .subtle {
+  flex-basis: auto;
+  white-space: nowrap;
+}
 .stats-toolbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
